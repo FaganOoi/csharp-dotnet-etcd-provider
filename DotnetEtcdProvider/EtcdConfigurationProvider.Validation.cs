@@ -1,6 +1,6 @@
 ﻿using DotnetEtcdProvider.Exceptions;
 using DotnetEtcdProvider.Extensions;
-using DotnetEtcdProvider.Model;
+using DotnetEtcdProvider.Models;
 
 namespace DotnetEtcdProvider
 {

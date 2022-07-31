@@ -1,4 +1,4 @@
-﻿using DotnetEtcdProvider.Model;
+﻿using DotnetEtcdProvider.Models;
 using Microsoft.Extensions.Configuration;
 
 namespace DotnetEtcdProvider;

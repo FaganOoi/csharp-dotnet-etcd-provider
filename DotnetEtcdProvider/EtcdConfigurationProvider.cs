@@ -1,5 +1,5 @@
 ﻿using dotnet_etcd;
-using DotnetEtcdProvider.Model;
+using DotnetEtcdProvider.Models;
 using Etcdserverpb;
 using Microsoft.Extensions.Configuration;
 using Timer = System.Timers.Timer;

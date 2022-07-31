@@ -1,4 +1,4 @@
-﻿namespace DotnetEtcdProvider.Model
+﻿namespace DotnetEtcdProvider.Models
 {
     public class DotnetEtcdProviderConnection
     {

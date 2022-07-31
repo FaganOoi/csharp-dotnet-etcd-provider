@@ -1,4 +1,4 @@
-﻿using DotnetEtcdProvider.Model;
+﻿using DotnetEtcdProvider.Models;
 
 namespace DotnetEtcdProvider.Exceptions
 {

@@ -1,4 +1,4 @@
-using DemoProject.Model;
+using DemoProject.Models;
 using DotnetEtcdProvider;
 
 var builder = WebApplication.CreateBuilder(args);

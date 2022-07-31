@@ -1,4 +1,4 @@
-using DemoProject.Model;
+using DemoProject.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 

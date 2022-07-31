@@ -1,4 +1,4 @@
-﻿namespace DemoProject.Model;
+﻿namespace DemoProject.Models;
 
 public class AppSettingsFromEtcd
 {
