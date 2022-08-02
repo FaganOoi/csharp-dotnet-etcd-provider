@@ -1,6 +1,7 @@
 ﻿using DotnetEtcdProvider.Exceptions;
 using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
+using System.Collections.Generic;
 
 namespace DotnetEtcdProvider
 {
@@ -10,7 +11,7 @@ namespace DotnetEtcdProvider
 
         private void ValidateConnection(DotnetEtcdProviderConnection connection)
         {
-            List<string> errorMessages = new();
+            List<string> errorMessages = new List<string>();
             HandleValidation(() => ValidateUrl(connection.URL), errorMessages);
             HandleValidation(() => ValidateAuth(connection.Username, connection.Password), errorMessages);
             HandleValidation(() => ValidateReloadMode(connection), errorMessages);

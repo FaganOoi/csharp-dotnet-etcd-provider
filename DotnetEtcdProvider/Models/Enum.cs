@@ -1,7 +1,9 @@
-﻿namespace DotnetEtcdProvider.Models;
-
-public enum ReloadMode
+﻿namespace DotnetEtcdProvider.Models
 {
-    ScheduledReload,
-    OnChangeReload
+    public enum ReloadMode
+    {
+        ScheduledReload,
+        OnChangeReload
+    }
+
 }
