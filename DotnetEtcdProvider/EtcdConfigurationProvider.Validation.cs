@@ -10,24 +10,21 @@ namespace DotnetEtcdProvider
 
         private void ValidateConnection(DotnetEtcdProviderConnection connection)
         {
-            string errorMsg = "";
-            HandleValidation(() => ValidateUrl(connection.URL), ref errorMsg);
-            HandleValidation(() => ValidateAuth(connection.Username, connection.Password), ref errorMsg);
-            HandleValidation(() => ValidateReloadMode(connection.SecondsToReload), ref errorMsg);
+            List<string> errorMessages = new();
+            HandleValidation(() => ValidateUrl(connection.URL), errorMessages);
+            HandleValidation(() => ValidateAuth(connection.Username, connection.Password), errorMessages);
+            HandleValidation(() => ValidateReloadMode(connection), errorMessages);
 
-            if (errorMsg.HasData())
-                throw new EtcdProviderConfigurationException(errorMsg, connection);
+            if (errorMessages.Count > 0)
+                throw new EtcdProviderConfigurationException(string.Join(',', errorMessages), connection);
         }
 
-        private void HandleValidation(StringReturnAction action, ref String msg)
+        private void HandleValidation(StringReturnAction action, List<string> errorMsgs)
         {
             string result = action.Invoke();
             if (result.HasData())
             {
-                if (msg.IsEmpty())
-                    msg = result;
-                else
-                    msg = $"{msg} - {result}";
+                errorMsgs.Add(result);
             }
         }
 
