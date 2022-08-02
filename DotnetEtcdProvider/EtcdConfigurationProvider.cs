@@ -12,14 +12,18 @@ public partial class EtcdConfigurationProvider : ConfigurationProvider
 
     private readonly Timer _reloadTimer = new();
 
+    private List<string> KeysBeenWatched = new();
+
     private bool _etcdRequiredAuth = false;
     private readonly EtcdClient _etcdClient;
     private readonly Grpc.Core.Metadata _header;
 
     public EtcdConfigurationProvider(DotnetEtcdProviderConnection connectionEtcd)
     {
+        // Validate Connection
         ValidateConnection(connectionEtcd);
 
+        // Setup
         _connectionEtcd = connectionEtcd;
         _etcdClient = new EtcdClient(_connectionEtcd.URL);
         if (_etcdRequiredAuth)
@@ -35,7 +39,8 @@ public partial class EtcdConfigurationProvider : ConfigurationProvider
 
         }
 
-        if (connectionEtcd.SecondsToReload > 0)
+        // Init setup for schedule reload
+        if (_connectionEtcd.ReloadMode == ReloadMode.ScheduledReload)
         {
             _reloadTimer.AutoReset = false;
             _reloadTimer.Interval = TimeSpan.FromSeconds(_connectionEtcd.SecondsToReload).TotalMilliseconds;
@@ -52,11 +57,17 @@ public partial class EtcdConfigurationProvider : ConfigurationProvider
         }
         finally
         {
-            if (_connectionEtcd.SecondsToReload > 0)
+            if (_connectionEtcd.ReloadMode == ReloadMode.ScheduledReload)
                 _reloadTimer.Start();
+            else
+                WatchSetupAsync();
         }
     }
 
+    /// <summary>
+    /// Get data from Etcd
+    /// </summary>
+    /// <returns></returns>
     private IDictionary<string, string> GetEtcdData()
     {
         // Get all data from Etcd
@@ -69,5 +80,51 @@ public partial class EtcdConfigurationProvider : ConfigurationProvider
         }
 
         return settings;
+    }
+
+    /// <summary>
+    /// Setup Watch event to reload when there is changes
+    /// </summary>
+    /// <returns></returns>
+    private Task WatchSetupAsync()
+    {
+        //foreach (var data in Data)
+        //{
+
+        //    WatchRequest request = new WatchRequest()
+        //    {
+        //        CreateRequest = new WatchCreateRequest()
+        //        {
+        //            Key = ByteString.CopyFromUtf8(data.Key)
+        //        }
+        //    };
+        //    _etcdClient.Watch(request, updateData);
+        //}
+
+        // It will watch based on our prefix
+        // For example, if we start from "AppSettingsFromEtcd:XXXX"
+        // We will get latest changes as we use watch range for `AppSettingsFromEtcd`
+        foreach (var prefixStr in _connectionEtcd.PrefixListUsedToWatch)
+        {
+            Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, updateData), TaskCreationOptions.LongRunning);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Update data once there are changes done
+    /// </summary>
+    /// <param name="response"></param>
+    private void updateData(WatchEvent[] response)
+    {
+        foreach (WatchEvent e1 in response)
+        {
+            if (e1.Value == "")
+                Data.Remove(e1.Key);
+            else
+                Data[e1.Key] = e1.Value;
+        }
+        OnReload();
     }
 }

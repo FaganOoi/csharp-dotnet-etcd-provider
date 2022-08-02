@@ -13,7 +13,7 @@ namespace DotnetEtcdProvider
             string errorMsg = "";
             HandleValidation(() => ValidateUrl(connection.URL), ref errorMsg);
             HandleValidation(() => ValidateAuth(connection.Username, connection.Password), ref errorMsg);
-            HandleValidation(() => ValidateAutoReloadDuration(connection.SecondsToReload), ref errorMsg);
+            HandleValidation(() => ValidateReloadMode(connection.SecondsToReload), ref errorMsg);
 
             if (errorMsg.HasData())
                 throw new EtcdProviderConfigurationException(errorMsg, connection);
@@ -51,12 +51,17 @@ namespace DotnetEtcdProvider
             return "Please check on username and password provided";
         }
 
-        private string ValidateAutoReloadDuration(int duration)
+        private string ValidateReloadMode(DotnetEtcdProviderConnection connection)
         {
-            if (duration >= 0)
-                return null;
+            if (connection.ReloadMode == ReloadMode.ScheduledReload && connection.SecondsToReload <= 0)
+                return "Please provided duration at least 1 second.";
 
-            return "Please provided duration at least zero.";
+            if (connection.ReloadMode == ReloadMode.OnChangeReload
+                && (connection.PrefixListUsedToWatch is null || connection.PrefixListUsedToWatch.Count <= 0)
+            )
+                return "Please provided at least 1 prefix to watch.";
+
+            return null;
         }
     }
 }

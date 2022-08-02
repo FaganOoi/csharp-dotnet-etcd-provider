@@ -8,13 +8,29 @@ It is custom configuration provider that use `dotnet-etcd` library to load the c
 
 ### Step 1: AppSettings
 In our appsettings.json, we need to put configuration settings to access Etcd.
+By default, we will use `OnChangeReload` Reload Mode which it will watch prefix based on `PrefixListUsedToWatch` and made changes accordinly. If we would like to reload it after fixed duration, we can change to `ScheduledReload` reload mode and provide seconds in fields of `SecondsToReload`.
+
 
 ```json
 "EtcdSettings": {
     "URL":  "http://localhost:2379",
     "Name": "Username(Optional)",
     "Password": "****(Optional)",
-    "SecondsToReload": 10
+    "ReloadMode": "OnChangeReload",
+    "SecondsToReload": 0,
+    "PrefixListUsedToWatch": [
+        "Array of string to watch prefixc"
+    ],
+    
+}
+```
+
+Reload Mode Available
+```csharp
+public enum ReloadMode
+{
+    ScheduledReload,
+    OnChangeReload
 }
 ```
 
