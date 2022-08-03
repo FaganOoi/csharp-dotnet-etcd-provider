@@ -1,4 +1,6 @@
-﻿namespace DotnetEtcdProvider.Models
+﻿using System.Collections.Generic;
+
+namespace DotnetEtcdProvider.Models
 {
     public class DotnetEtcdProviderConnection
     {

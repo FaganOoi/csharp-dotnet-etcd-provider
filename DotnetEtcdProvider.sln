@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetEtcdProvider", "Dotne
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DemoProject", "DemoProject\DemoProject.csproj", "{25D18F9E-45AB-439D-91FD-FB52524394CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetEtcdProvider.Test", "DotnetEtcdProvider.Test\DotnetEtcdProvider.Test.csproj", "{44B1AD28-82E8-4EC2-8962-D53EAEDF734F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetEtcdProvider.Test", "DotnetEtcdProvider.Test\DotnetEtcdProvider.Test.csproj", "{44B1AD28-82E8-4EC2-8962-D53EAEDF734F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
