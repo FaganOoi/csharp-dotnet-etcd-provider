@@ -1,10 +1,10 @@
-﻿using dotnet_etcd;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using dotnet_etcd;
 using DotnetEtcdProvider.Models;
 using Etcdserverpb;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Timer = System.Timers.Timer;
 
 namespace DotnetEtcdProvider
@@ -121,14 +121,22 @@ namespace DotnetEtcdProvider
         /// <param name="response"></param>
         private void updateData(WatchEvent[] response)
         {
-            foreach (WatchEvent e1 in response)
+            // Prevent the function make task crash due to the data cannot convert to proper data type
+            try
             {
-                if (e1.Value == "")
-                    Data.Remove(e1.Key);
-                else
-                    Data[e1.Key] = e1.Value;
+                foreach (WatchEvent e1 in response)
+                {
+                    if (e1.Value == "")
+                        Data.Remove(e1.Key);
+                    else
+                        Data[e1.Key] = e1.Value;
+                }
+                OnReload();
+
             }
-            OnReload();
+            catch (Exception)
+            {
+            }
         }
     }
 
