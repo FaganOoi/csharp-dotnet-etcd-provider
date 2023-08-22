@@ -4,6 +4,11 @@ It is custom configuration provider that use `dotnet-etcd` library to load the c
 ## Dependency
 - [dotnet-etcd](https://github.com/shubhamranjan/dotnet-etcd)
 
+## UI Tool for etcd
+The UI Tool supported and tested to confirm it is working well with the package
+- `etcdkeeper` 
+- `etcd-manager`
+
 ## Getting Started
 
 ### Step 1: AppSettings
