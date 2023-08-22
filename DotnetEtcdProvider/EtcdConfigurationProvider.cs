@@ -79,7 +79,13 @@ namespace DotnetEtcdProvider
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var data in dataList.Kvs)
             {
-                settings.Add(data.Key.ToStringUtf8(), data.Value.ToStringUtf8());
+                var key = data.Key.ToStringUtf8();
+                var val = data.Value.ToStringUtf8();
+                if (!val.IsEmpty())
+                {
+                    key = HandleKeyFromEtcdKeeper(key);
+                    settings.Add(key, val);
+                }
             }
 
             return settings;
@@ -126,10 +132,11 @@ namespace DotnetEtcdProvider
             {
                 foreach (WatchEvent e1 in response)
                 {
+                    string key = HandleKeyFromEtcdKeeper(e1.Key);
                     if (e1.Value == "")
-                        Data.Remove(e1.Key);
+                        Data.Remove(key);
                     else
-                        Data[e1.Key] = e1.Value;
+                        Data[key] = e1.Value;
                 }
                 OnReload();
 
@@ -137,6 +144,20 @@ namespace DotnetEtcdProvider
             catch (Exception)
             {
             }
+        }
+
+        /// <summary>
+        /// Handle etcd ui which will use slash to split the node or folder
+        /// </summary>
+        /// <param name="originalValue"></param>
+        /// <returns></returns>
+        private string HandleKeyFromEtcdKeeper(string originalValue)
+        {
+            if(originalValue.StartsWith("/"))
+                originalValue = originalValue.Substring(1);
+
+            return originalValue.Replace("/", ":");
+
         }
     }
 
