@@ -77,5 +77,5 @@ It is the tool most suggested to access etcd as the UI more friendly and we can 
 ### etcd-manager
 
 Compare to etcdkeepr, we need to take more concern about the key pattern when creat etcd value
-As it does not have directory concept, it is hard for us to insert value such as JSON, XML and etc.
+As it does not have directory concept, we need to cater the concept manually besides it is hard for us to insert value such as JSON, XML and etc.
 For the key pattern need to follow, we can refer to [here](./DotnetEtcdProvider/README.md)
