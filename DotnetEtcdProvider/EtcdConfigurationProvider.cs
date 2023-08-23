@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using dotnet_etcd;
+using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
 using Etcdserverpb;
 using Microsoft.Extensions.Configuration;
+using System.Linq;
 using Timer = System.Timers.Timer;
 
 namespace DotnetEtcdProvider
@@ -83,8 +85,20 @@ namespace DotnetEtcdProvider
                 var val = data.Value.ToStringUtf8();
                 if (!val.IsEmpty())
                 {
-                    key = HandleKeyFromEtcdKeeper(key);
-                    settings.Add(key, val);
+                    key = MapKeyToConfigurationProviderKeyPattern(key);
+                    if (IsValueAnArray(val) || IsValueObject(val))
+                    {
+                        Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, val);
+                        foreach(var valDic in result)
+                        {
+                            settings.Add(valDic.Key, valDic.Value);
+                        }
+                    }
+                    else
+                    {
+
+                        settings.Add(key, val);
+                    }
                 }
             }
 
@@ -115,7 +129,7 @@ namespace DotnetEtcdProvider
             // We will get latest changes as we use watch range for `AppSettingsFromEtcd`
             foreach (var prefixStr in _connectionEtcd.PrefixListUsedToWatch)
             {
-                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, updateData), TaskCreationOptions.LongRunning);
+                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, UpdateData), TaskCreationOptions.LongRunning);
             }
 
             return Task.CompletedTask;
@@ -125,39 +139,46 @@ namespace DotnetEtcdProvider
         /// Update data once there are changes done
         /// </summary>
         /// <param name="response"></param>
-        private void updateData(WatchEvent[] response)
+        private void UpdateData(WatchEvent[] response)
         {
             // Prevent the function make task crash due to the data cannot convert to proper data type
             try
             {
                 foreach (WatchEvent e1 in response)
                 {
-                    string key = HandleKeyFromEtcdKeeper(e1.Key);
+                    string key = MapKeyToConfigurationProviderKeyPattern(e1.Key);
                     if (e1.Value == "")
                         Data.Remove(key);
                     else
-                        Data[key] = e1.Value;
+                    {
+                        if (IsValueAnArray(e1.Value) || IsValueObject(e1.Value))
+                        {
+                            Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, e1.Value);
+                            
+                            // Delete Old keys
+                            List<string> oldKeys = Data.Where(u => u.Key.StartsWith(key)).Select(u => u.Key).ToList();
+                            foreach (var oldKey in oldKeys)
+                                Data.Remove(oldKey);
+
+                            // Insert New Data
+                            foreach (var valDic in result)
+                            {
+                                Data[valDic.Key] = valDic.Value;
+                            }
+                        }
+                        else
+                        {
+                            Data[key] = e1.Value;
+                        }
+                    }
                 }
                 OnReload();
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
             }
-        }
-
-        /// <summary>
-        /// Handle etcd ui which will use slash to split the node or folder
-        /// </summary>
-        /// <param name="originalValue"></param>
-        /// <returns></returns>
-        private string HandleKeyFromEtcdKeeper(string originalValue)
-        {
-            if(originalValue.StartsWith("/"))
-                originalValue = originalValue.Substring(1);
-
-            return originalValue.Replace("/", ":");
-
         }
     }
 
