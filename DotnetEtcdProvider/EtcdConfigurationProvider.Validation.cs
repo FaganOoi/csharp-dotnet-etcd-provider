@@ -61,5 +61,16 @@ namespace DotnetEtcdProvider
 
             return null;
         }
+
+        private static bool IsValueAnArray(string val)
+        {
+            return val.StartsWith("[") && val.EndsWith("]");
+        }
+
+        private static bool IsValueObject(string val)
+        {
+            return val.StartsWith("{") && val.EndsWith("}");
+        }
+
     }
 }
