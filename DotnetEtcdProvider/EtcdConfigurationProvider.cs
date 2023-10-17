@@ -85,6 +85,7 @@ namespace DotnetEtcdProvider
                 var val = data.Value.ToStringUtf8();
                 if (!val.IsEmpty())
                 {
+                    val = val.Trim();
                     key = MapKeyToConfigurationProviderKeyPattern(key);
                     if (IsValueAnArray(val) || IsValueObject(val))
                     {
