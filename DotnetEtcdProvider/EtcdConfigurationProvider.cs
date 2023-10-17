@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using dotnet_etcd;
 using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
 using Etcdserverpb;
 using Microsoft.Extensions.Configuration;
-using System.Linq;
 using Timer = System.Timers.Timer;
 
 namespace DotnetEtcdProvider
@@ -30,7 +30,7 @@ namespace DotnetEtcdProvider
 
             // Setup
             _connectionEtcd = connectionEtcd;
-            _etcdClient = new EtcdClient(_connectionEtcd.URL);
+            _etcdClient = SetupEtcdClient();
             if (_etcdRequiredAuth)
             {
                 var authRes = _etcdClient.Authenticate(new Etcdserverpb.AuthenticateRequest()
@@ -69,6 +69,20 @@ namespace DotnetEtcdProvider
             }
         }
 
+        private EtcdClient SetupEtcdClient()
+        {
+            if (IsValidSingleEndpoint(_connectionEtcd.URL))
+            {
+
+                return new EtcdClient(_connectionEtcd.URL);
+            }
+            else
+            {
+                string urls = String.Join(",", _connectionEtcd.URLs);
+                return new EtcdClient(urls);
+            }
+        }
+
         /// <summary>
         /// Get data from Etcd
         /// </summary>
@@ -85,11 +99,12 @@ namespace DotnetEtcdProvider
                 var val = data.Value.ToStringUtf8();
                 if (!val.IsEmpty())
                 {
+                    val = val.Trim();
                     key = MapKeyToConfigurationProviderKeyPattern(key);
                     if (IsValueAnArray(val) || IsValueObject(val))
                     {
                         Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, val);
-                        foreach(var valDic in result)
+                        foreach (var valDic in result)
                         {
                             settings.Add(valDic.Key, valDic.Value);
                         }
@@ -147,14 +162,15 @@ namespace DotnetEtcdProvider
                 foreach (WatchEvent e1 in response)
                 {
                     string key = MapKeyToConfigurationProviderKeyPattern(e1.Key);
-                    if (e1.Value == "")
+                    if (e1.Value.IsEmpty())
                         Data.Remove(key);
                     else
                     {
-                        if (IsValueAnArray(e1.Value) || IsValueObject(e1.Value))
+                        string value = e1.Value.Trim();
+                        if (IsValueAnArray(value) || IsValueObject(value))
                         {
-                            Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, e1.Value);
-                            
+                            Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, value);
+
                             // Delete Old keys
                             List<string> oldKeys = Data.Where(u => u.Key.StartsWith(key)).Select(u => u.Key).ToList();
                             foreach (var oldKey in oldKeys)

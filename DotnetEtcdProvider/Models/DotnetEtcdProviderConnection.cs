@@ -6,8 +6,14 @@ namespace DotnetEtcdProvider.Models
     {
         /// <summary>
         /// Connection string included http/https
+        /// We will prioritise on single endpoint
         /// </summary>
         public string URL { get; set; }
+
+        /// <summary>
+        /// Connections string included http/https
+        /// </summary>
+        public List<string> URLs { get; set; }
 
         /// <summary>
         /// Username for authentication
