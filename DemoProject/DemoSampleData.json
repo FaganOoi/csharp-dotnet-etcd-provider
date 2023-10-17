@@ -1,0 +1,17 @@
+{
+  "Name": "SampleApp",
+  "IntegerValue": 42,
+  "DoubleValue": 3.14,
+  "ObjectItem": {
+    "Username": "JohnDoe",
+    "IndexName": "SampleIndex"
+  },
+  "ModelValueA": {
+    "StringValue": "ValueA1",
+    "StringValue2": "ValueA2",
+    "ModelValueB": {
+      "IntValue": 123
+    }
+  },
+  "ListInt": [1, 2, 3, 4, 5]
+}
