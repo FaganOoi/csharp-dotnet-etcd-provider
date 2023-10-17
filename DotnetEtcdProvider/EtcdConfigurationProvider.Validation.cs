@@ -1,7 +1,8 @@
-﻿using DotnetEtcdProvider.Exceptions;
+﻿using System.Collections.Generic;
+using System.Linq;
+using DotnetEtcdProvider.Exceptions;
 using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
-using System.Collections.Generic;
 
 namespace DotnetEtcdProvider
 {
@@ -12,7 +13,7 @@ namespace DotnetEtcdProvider
         private void ValidateConnection(DotnetEtcdProviderConnection connection)
         {
             List<string> errorMessages = new List<string>();
-            HandleValidation(() => ValidateUrl(connection.URL), errorMessages);
+            HandleValidation(() => ValidateUrl(connection.URL, connection.URLs), errorMessages);
             HandleValidation(() => ValidateAuth(connection.Username, connection.Password), errorMessages);
             HandleValidation(() => ValidateReloadMode(connection), errorMessages);
 
@@ -29,11 +30,22 @@ namespace DotnetEtcdProvider
             }
         }
 
-        private string ValidateUrl(string url)
+        private string ValidateUrl(string url, List<string> urls)
         {
-            if (url.HasData() && url.IsUrlWithProxy())
+            if (IsValidSingleEndpoint(url) || IsValidMultipleEndpoints(urls))
                 return null;
-            return "Please provided valid connection to access Etcd";
+            return "Please provided valid connection to access Etcd either by URL or URLs field";
+
+        }
+
+        private static bool IsValidSingleEndpoint(string url)
+        {
+            return url.HasData() && url.IsUrlWithProxy();
+        }
+
+        private static bool IsValidMultipleEndpoints(List<string> urls)
+        {
+            return urls != null && urls.Any() && urls.All(u => u.IsUrlWithProxy());
         }
 
         private string ValidateAuth(string username, string password)
