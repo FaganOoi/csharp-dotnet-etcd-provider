@@ -39,8 +39,8 @@ namespace DotnetEtcdProvider
                     Password = _connectionEtcd.Password,
                 });
                 _header = new Grpc.Core.Metadata() {
-                new Grpc.Core.Metadata.Entry("token",authRes.Token)
-            };
+                    new Grpc.Core.Metadata.Entry("token",authRes.Token)
+                };
 
             }
 
@@ -144,11 +144,28 @@ namespace DotnetEtcdProvider
             // We will get latest changes as we use watch range for `AppSettingsFromEtcd`
             foreach (var prefixStr in _connectionEtcd.PrefixListUsedToWatch)
             {
-                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, UpdateData), TaskCreationOptions.LongRunning);
+                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, UpdateData, headers: _header), TaskCreationOptions.LongRunning);
             }
 
             return Task.CompletedTask;
         }
+
+        // // -------------------------------
+        // // Print function that prints key and value from the watch response
+        // private static void UpdateData(WatchResponse response)
+        // {
+        //     if (response.Events.Count == 0)
+        //     {
+        //         Console.WriteLine(response);
+        //     }
+        //     else
+        //     {
+        //         ReloadData(response.Events.);
+        //     }
+        //     Console.WriteLine("UpdateData response");
+        //     Console.WriteLine(JsonSerializer.Serialize(response));
+        // }
+
 
         /// <summary>
         /// Update data once there are changes done
