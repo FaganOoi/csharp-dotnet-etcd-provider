@@ -13,6 +13,7 @@ builder.Services.AddSwaggerGen();
 builder.Configuration.AddEtcdConfiguration("Etcd");
 
 builder.Services.Configure<AppSettingsFromEtcd>(builder.Configuration.GetSection("AppSettingsFromEtcd"));
+builder.Services.Configure<Dev2>(builder.Configuration.GetSection("Dev2"));
 
 
 var app = builder.Build();

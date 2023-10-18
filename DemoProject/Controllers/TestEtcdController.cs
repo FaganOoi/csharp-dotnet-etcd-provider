@@ -9,16 +9,18 @@ namespace DemoProject.Controllers
     public class TestEtcdController : ControllerBase
     {
         private readonly AppSettingsFromEtcd _AppSettingsFromEtcd;
+        private readonly Dev2 _Dev2;
 
-        public TestEtcdController(IOptionsMonitor<AppSettingsFromEtcd> optionsMonitor)
+        public TestEtcdController(IOptionsMonitor<AppSettingsFromEtcd> optionsMonitor, IOptionsMonitor<Dev2> optionsMonitor2)
         {
             _AppSettingsFromEtcd = optionsMonitor.CurrentValue;
+            _Dev2 = optionsMonitor2.CurrentValue;
         }
 
         [HttpGet(Name = "get/all")]
-        public AppSettingsFromEtcd Get()
+        public IActionResult Get()
         {
-            return _AppSettingsFromEtcd;
+            return Ok(new { AppSettingsFromEtcd = _AppSettingsFromEtcd, Dev2 = _Dev2 });
         }
     }
 }

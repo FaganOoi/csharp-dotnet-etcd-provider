@@ -36,6 +36,11 @@ namespace DotnetEtcdProvider.Models
         public List<string> PrefixListUsedToWatch { get; set; }
 
         /// <summary>
+        /// List of prefix will to remove when keep into provider
+        /// </summary>
+        public List<string> PrefixListUsedToRemoveInData { get; set; }
+
+        /// <summary>
         /// Mode to configure how to update data from time to time
         /// </summary>
         public ReloadMode ReloadMode { get; set; } = ReloadMode.OnChangeReload;

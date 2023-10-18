@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace DotnetEtcdProvider
@@ -83,6 +84,18 @@ namespace DotnetEtcdProvider
         /// <returns></returns>
         private string MapKeyToConfigurationProviderKeyPattern(string originalKey)
         {
+            if (_connectionEtcd.PrefixListUsedToRemoveInData.Any())
+            {
+                foreach (var pref in _connectionEtcd.PrefixListUsedToRemoveInData)
+                {
+                    if (originalKey.StartsWith(pref))
+                    {
+                        originalKey = originalKey.Remove(0, pref.Length);
+                        break;
+                    }
+                }
+            }
+
             if (originalKey.StartsWith("/"))
                 originalKey = originalKey.Substring(1);
 
