@@ -13,11 +13,11 @@ namespace DotnetEtcdProvider
 {
     public partial class EtcdConfigurationProvider : ConfigurationProvider
     {
+        private readonly string _defaultPrefix = "/";
+
         private readonly DotnetEtcdProviderConnection _connectionEtcd;
 
         private readonly Timer _reloadTimer = new Timer();
-
-        private bool _etcdRequiredAuth = false;
 
         private readonly EtcdClient _etcdClient;
 
@@ -27,11 +27,15 @@ namespace DotnetEtcdProvider
         {
             // Validate Connection
             ValidateConnection(connectionEtcd);
+            if (connectionEtcd.PrefixData == null || !connectionEtcd.PrefixData.Any())
+            {
+                connectionEtcd.PrefixData.Add(_defaultPrefix);
+            }
 
             // Setup
             _connectionEtcd = connectionEtcd;
             _etcdClient = SetupEtcdClient();
-            if (_etcdRequiredAuth)
+            if (IsAuthenticationNeeded(username: _connectionEtcd.Username, password: _connectionEtcd.Password))
             {
                 var authRes = _etcdClient.Authenticate(new Etcdserverpb.AuthenticateRequest()
                 {
@@ -39,9 +43,8 @@ namespace DotnetEtcdProvider
                     Password = _connectionEtcd.Password,
                 });
                 _header = new Grpc.Core.Metadata() {
-                new Grpc.Core.Metadata.Entry("token",authRes.Token)
-            };
-
+                    new Grpc.Core.Metadata.Entry("token",authRes.Token)
+                };
             }
 
             // Init setup for schedule reload
@@ -57,14 +60,14 @@ namespace DotnetEtcdProvider
         {
             try
             {
-                Data = GetEtcdData();
+                Data = InitialSetupData();
                 OnReload();
             }
             finally
             {
                 if (_connectionEtcd.ReloadMode == ReloadMode.ScheduledReload)
                     _reloadTimer.Start();
-                else
+                else if (_connectionEtcd.ReloadMode == ReloadMode.OnChangeReload)
                     WatchSetupAsync();
             }
         }
@@ -87,10 +90,25 @@ namespace DotnetEtcdProvider
         /// Get data from Etcd
         /// </summary>
         /// <returns></returns>
-        private IDictionary<string, string> GetEtcdData()
+        private IDictionary<string, string> InitialSetupData()
         {
-            // Get all data from Etcd
-            RangeResponse dataList = _etcdClient.GetRange("", headers: _header);
+            var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prefix in _connectionEtcd.PrefixData)
+            {
+                Dictionary<string, string> result = ProcessGetDataFromEtcd(prefix: prefix);
+                foreach (var valDic in result)
+                {
+                    settings.Add(valDic.Key, valDic.Value);
+                }
+            }
+
+            return settings;
+        }
+
+        private Dictionary<string, string> ProcessGetDataFromEtcd(string prefix)
+        {
+            // Get all data from Etcd based on prefix
+            RangeResponse dataList = _etcdClient.GetRange(prefix, headers: _header);
 
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var data in dataList.Kvs)
@@ -99,20 +117,12 @@ namespace DotnetEtcdProvider
                 var val = data.Value.ToStringUtf8();
                 if (!val.IsEmpty())
                 {
-                    val = val.Trim();
                     key = MapKeyToConfigurationProviderKeyPattern(key);
-                    if (IsValueAnArray(val) || IsValueObject(val))
-                    {
-                        Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, val);
-                        foreach (var valDic in result)
-                        {
-                            settings.Add(valDic.Key, valDic.Value);
-                        }
-                    }
-                    else
-                    {
 
-                        settings.Add(key, val);
+                    Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, val);
+                    foreach (var valDic in result)
+                    {
+                        settings.Add(valDic.Key, valDic.Value);
                     }
                 }
             }
@@ -126,29 +136,33 @@ namespace DotnetEtcdProvider
         /// <returns></returns>
         private Task WatchSetupAsync()
         {
-            //foreach (var data in Data)
-            //{
-
-            //    WatchRequest request = new WatchRequest()
-            //    {
-            //        CreateRequest = new WatchCreateRequest()
-            //        {
-            //            Key = ByteString.CopyFromUtf8(data.Key)
-            //        }
-            //    };
-            //    _etcdClient.Watch(request, updateData);
-            //}
-
             // It will watch based on our prefix
             // For example, if we start from "AppSettingsFromEtcd:XXXX"
             // We will get latest changes as we use watch range for `AppSettingsFromEtcd`
-            foreach (var prefixStr in _connectionEtcd.PrefixListUsedToWatch)
+            foreach (var prefixStr in _connectionEtcd.PrefixData)
             {
-                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, UpdateData), TaskCreationOptions.LongRunning);
+                Task.Factory.StartNew(() => _etcdClient.WatchRange(prefixStr, UpdateData, headers: _header), TaskCreationOptions.LongRunning);
             }
 
             return Task.CompletedTask;
         }
+
+        // // -------------------------------
+        // // Print function that prints key and value from the watch response
+        // private static void UpdateData(WatchResponse response)
+        // {
+        //     if (response.Events.Count == 0)
+        //     {
+        //         Console.WriteLine(response);
+        //     }
+        //     else
+        //     {
+        //         ReloadData(response.Events.);
+        //     }
+        //     Console.WriteLine("UpdateData response");
+        //     Console.WriteLine(JsonSerializer.Serialize(response));
+        // }
+
 
         /// <summary>
         /// Update data once there are changes done
@@ -167,24 +181,17 @@ namespace DotnetEtcdProvider
                     else
                     {
                         string value = e1.Value.Trim();
-                        if (IsValueAnArray(value) || IsValueObject(value))
-                        {
-                            Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, value);
+                        Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, value);
 
-                            // Delete Old keys
-                            List<string> oldKeys = Data.Where(u => u.Key.StartsWith(key)).Select(u => u.Key).ToList();
-                            foreach (var oldKey in oldKeys)
-                                Data.Remove(oldKey);
+                        // Delete Old keys
+                        List<string> oldKeys = Data.Where(u => u.Key.StartsWith(key)).Select(u => u.Key).ToList();
+                        foreach (var oldKey in oldKeys)
+                            Data.Remove(oldKey);
 
-                            // Insert New Data
-                            foreach (var valDic in result)
-                            {
-                                Data[valDic.Key] = valDic.Value;
-                            }
-                        }
-                        else
+                        // Insert New Data
+                        foreach (var valDic in result)
                         {
-                            Data[key] = e1.Value;
+                            Data[valDic.Key] = valDic.Value;
                         }
                     }
                 }

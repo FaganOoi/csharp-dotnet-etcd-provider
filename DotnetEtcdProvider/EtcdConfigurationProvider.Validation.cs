@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using DotnetEtcdProvider.Exceptions;
 using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
@@ -50,15 +51,25 @@ namespace DotnetEtcdProvider
 
         private string ValidateAuth(string username, string password)
         {
-            if (username.IsEmpty() && password.IsEmpty())
-                return null;
-            if (username.HasData() && password.HasData())
+            if (HasUsernameButEmptyPassword(username, password) || HasPasswordButEmptyUsername(username, password))
+                return "Please check on username and password provided";
+
+            return null;
+
+            static bool HasUsernameButEmptyPassword(string username, string password)
             {
-                _etcdRequiredAuth = true;
-                return null;
+                return username.IsEmpty() && !password.IsEmpty();
             }
 
-            return "Please check on username and password provided";
+            static bool HasPasswordButEmptyUsername(string username, string password)
+            {
+                return !username.IsEmpty() && password.IsEmpty();
+            }
+        }
+
+        private static bool IsAuthenticationNeeded(string username, string password)
+        {
+            return username.HasData() && password.HasData();
         }
 
         private string ValidateReloadMode(DotnetEtcdProviderConnection connection)
@@ -66,22 +77,26 @@ namespace DotnetEtcdProvider
             if (connection.ReloadMode == ReloadMode.ScheduledReload && connection.SecondsToReload <= 0)
                 return "Please provided duration at least 1 second.";
 
-            if (connection.ReloadMode == ReloadMode.OnChangeReload
-                && (connection.PrefixListUsedToWatch is null || connection.PrefixListUsedToWatch.Count <= 0)
-            )
-                return "Please provided at least 1 prefix to watch.";
-
             return null;
         }
 
         private static bool IsValueAnArray(string val)
         {
+            val = val.Trim();
             return val.StartsWith("[") && val.EndsWith("]");
         }
 
         private static bool IsValueObject(string val)
         {
-            return val.StartsWith("{") && val.EndsWith("}");
+            try
+            {
+                JsonDocument.Parse(val);
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                return false;
+            }
         }
 
     }

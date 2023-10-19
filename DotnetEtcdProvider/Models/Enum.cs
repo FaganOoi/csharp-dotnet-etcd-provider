@@ -2,8 +2,12 @@
 {
     public enum ReloadMode
     {
-        ScheduledReload,
-        OnChangeReload
+
+        None = 0,
+
+        ScheduledReload = 1,
+
+        OnChangeReload = 2
     }
 
 }
