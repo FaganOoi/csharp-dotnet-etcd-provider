@@ -31,9 +31,10 @@ namespace DotnetEtcdProvider.Models
         public int SecondsToReload { get; set; }
 
         /// <summary>
-        /// List of prefix will be watch  when `ReloadMode` is OnChangeReload
+        /// It is a list of prefix that will get data from ETCD and look on the changes based on reload mode.
+        /// If not data provided, we will assume get all data and look on changes of "/"
         /// </summary>
-        public List<string> PrefixListUsedToWatch { get; set; }
+        public List<string> PrefixData { get; set; } = new List<string>();
 
         /// <summary>
         /// List of prefix will to remove when keep into provider
@@ -41,7 +42,7 @@ namespace DotnetEtcdProvider.Models
         public List<string> PrefixListUsedToRemoveInData { get; set; }
 
         /// <summary>
-        /// Mode to configure how to update data from time to time
+        /// Mode to configure how to update data from time to time or display continue watching
         /// </summary>
         public ReloadMode ReloadMode { get; set; } = ReloadMode.OnChangeReload;
     }

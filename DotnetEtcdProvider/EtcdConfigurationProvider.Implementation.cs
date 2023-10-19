@@ -13,6 +13,12 @@ namespace DotnetEtcdProvider
             var settings = new Dictionary<string, string>();
             try
             {
+                if (!IsValueAnArray(val) && !IsValueObject(val))
+                {
+                    settings.Add(key, val);
+                    return settings;
+                }
+
                 using (JsonDocument document = JsonDocument.Parse(val))
                 {
                     JsonElement root = document.RootElement;
@@ -60,18 +66,10 @@ namespace DotnetEtcdProvider
                 string value = property.Value.ToString();
                 string currentKeyObject = $"{key}:{keyTmp}";
 
-
-                if (IsValueAnArray(value) || IsValueObject(value)) // if object inside still got array or object
+                Dictionary<string, string> result = ConvertDynamicStringToDictionary(currentKeyObject, value);
+                foreach (var valDic in result)
                 {
-                    Dictionary<string, string> result = ConvertDynamicStringToDictionary(currentKeyObject, value);
-                    foreach (var valDic in result)
-                    {
-                        settings.Add(valDic.Key, valDic.Value);
-                    }
-                }
-                else
-                {
-                    settings.Add(currentKeyObject, value);
+                    settings.Add(valDic.Key, valDic.Value);
                 }
 
             }
