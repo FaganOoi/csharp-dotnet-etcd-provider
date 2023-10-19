@@ -1,6 +1,12 @@
 # DotnetEtcdProvider
 
-It is custom configuration provider that use `dotnet-etcd` library to load the configuration and update it from time to time. It help to provide alternative ways for us to change our appsettings without re-deploy the application. For now, it just support basic login and authentication.
+It is custom configuration provider that use `dotnet-etcd` library to load the configuration and update it from time to time. It help to provide alternative ways for us to change our appsettings without re-deploy the application.
+
+## Version 1.3
+
+For new version 1.3, it will have breaking changes as following
+
+- Rename `PrefixListUsedToWatch` to `PrefixData`. For now, we will use list to get data and look on the changes based on reload mode. When no data given, we will have hard code value `/` to get all.
 
 ## Dependency
 
@@ -27,18 +33,30 @@ By default, we will use `OnChangeReload` Reload Mode which it will watch prefix 
     "Password": "****(Optional)",
     "ReloadMode": "OnChangeReload",
     "SecondsToReload": 0,
-    "PrefixListUsedToWatch": [
-        "Array of string to watch prefixc"
+    "PrefixData": [
+        "Array of prefix to get data and load the changes"
     ],
 
 }
 ```
+
+| Property                       | Description                                                                                                                                                                       | Default Value               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `URL`                          | Connection string included http/https. We will prioritize on a single endpoint.                                                                                                   |                             |
+| `URLs`                         | Connections string included http/https.                                                                                                                                           |                             |
+| `Username`                     | Username for authentication.                                                                                                                                                      |                             |
+| `Password`                     | Password for authentication.                                                                                                                                                      |                             |
+| `SecondsToReload`              | Duration to reload data when `ReloadMode` is ScheduledReload.                                                                                                                     |                             |
+| `PrefixData`                   | It is a list of prefixes that will get data from ETCD and look for changes based on the reload mode. If no data is provided, assume getting all data and look for changes at "/". | `new List<string>()`        |
+| `PrefixListUsedToRemoveInData` | List of prefixes to remove when keeping data in the provider.                                                                                                                     |                             |
+| `ReloadMode`                   | Mode to configure how to update data from time to time or display continuous watching.                                                                                            | `ReloadMode.OnChangeReload` |
 
 Reload Mode Available
 
 ```csharp
 public enum ReloadMode
 {
+    None,
     ScheduledReload,
     OnChangeReload
 }
