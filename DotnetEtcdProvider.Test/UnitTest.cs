@@ -12,13 +12,14 @@ namespace DotnetEtcdProvider.Test;
 
 public class UnitTest : IAsyncLifetime
 {
-    private readonly TestcontainersContainer testcontainer = new TestcontainersBuilder<TestcontainersContainer>()
-        .WithImage("bitnami/etcd:latest")
-        .WithName("bitnami-etcd-test")
-        .WithEnvironment("ALLOW_NONE_AUTHENTICATION", "yes")
-        // 2379: Client Request
-        .WithPortBinding(2379)
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(2379))
+    private readonly IContainer testcontainer = new ContainerBuilder("gcr.io/etcd-development/etcd:v3.5.16")
+        .WithName("etcd-test")
+        .WithPortBinding(2379, 2379)
+        .WithCommand(
+            "/usr/local/bin/etcd",
+            "--advertise-client-urls", "http://0.0.0.0:2379",
+            "--listen-client-urls", "http://0.0.0.0:2379")
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("ready to serve client requests"))
         .Build();
 
     private TestModel _dotnetEtcdProviderTest = new();
@@ -62,8 +63,50 @@ public class UnitTest : IAsyncLifetime
     [Fact]
     public void TestData_ReturnCorrectData()
     {
+        using IHost host = BuildEtcdHost();
+
+        var options = host.Services.GetRequiredService<IOptions<TestModel>>().Value;
+
+        Assert.Equal(_dotnetEtcdProviderTest.IntegerValue, options.IntegerValue);
+        Assert.Equal(_dotnetEtcdProviderTest.DoubleValue, options.DoubleValue);
+        Assert.Equal(_dotnetEtcdProviderTest.StringArrayValue, options.StringArrayValue);
+        Assert.Equal(_dotnetEtcdProviderTest.DoubleArrayValue, options.DoubleArrayValue);
+        Assert.Equal(_dotnetEtcdProviderTest.ObjectModel.MyProperty, options.ObjectModel.MyProperty);
+        Assert.Equal(_dotnetEtcdProviderTest.ObjectModel.DecimalValue, options.ObjectModel.DecimalValue);
+    }
+
+    [Fact]
+    public async Task TestData_WatchReload_UpdatesAndDeletesKeys()
+    {
+        using EtcdClient etcdClient = new EtcdClient("http://localhost:2379");
+        using IHost host = BuildEtcdHost();
+        IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
+
+        Assert.Equal("msg", config["TestModel:StringValue"]);
+
+        await etcdClient.PutAsync("TestModel:StringValue", "updated-via-watch");
+        await WaitForConditionAsync(
+            () => config["TestModel:StringValue"] == "updated-via-watch",
+            TimeSpan.FromSeconds(5),
+            "StringValue should reload after Put");
+
+        await etcdClient.PutAsync("TestModel:WatchExtra", "extra");
+        await WaitForConditionAsync(
+            () => config["TestModel:WatchExtra"] == "extra",
+            TimeSpan.FromSeconds(5),
+            "New key should appear after Put");
+
+        await etcdClient.DeleteAsync("TestModel:WatchExtra");
+        await WaitForConditionAsync(
+            () => config["TestModel:WatchExtra"] is null,
+            TimeSpan.FromSeconds(5),
+            "Deleted key should be removed from configuration");
+    }
+
+    private static IHost BuildEtcdHost()
+    {
         string[] args = Array.Empty<string>();
-        using IHost host = Host.CreateDefaultBuilder(args)
+        return Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((_, configuration) =>
             {
                 configuration.Sources.Clear();
@@ -75,15 +118,25 @@ public class UnitTest : IAsyncLifetime
                 services.Configure<TestModel>(
                     context.Configuration.GetSection("TestModel")))
             .Build();
+    }
 
-        var options = host.Services.GetRequiredService<IOptions<TestModel>>().Value;
+    private static async Task WaitForConditionAsync(
+        Func<bool> condition,
+        TimeSpan timeout,
+        string failureMessage)
+    {
+        DateTime deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
 
-        Assert.Equal(_dotnetEtcdProviderTest.IntegerValue, options.IntegerValue);
-        Assert.Equal(_dotnetEtcdProviderTest.DoubleValue, options.DoubleValue);
-        Assert.Equal(_dotnetEtcdProviderTest.StringArrayValue, options.StringArrayValue);
-        Assert.Equal(_dotnetEtcdProviderTest.DoubleArrayValue, options.DoubleArrayValue);
-        Assert.Equal(_dotnetEtcdProviderTest.ObjectModel.MyProperty, options.ObjectModel.MyProperty);
-        Assert.Equal(_dotnetEtcdProviderTest.ObjectModel.DecimalValue, options.ObjectModel.DecimalValue);
+            await Task.Delay(100);
+        }
+
+        Assert.Fail($"{failureMessage} within {timeout.TotalSeconds}s");
     }
 
     private Dictionary<string, string> GetReflectionModel(object model, string parentName, string currentName = "")
