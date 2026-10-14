@@ -7,6 +7,7 @@ using DotnetEtcdProvider.Extensions;
 using DotnetEtcdProvider.Models;
 using Etcdserverpb;
 using Microsoft.Extensions.Configuration;
+using Mvccpb;
 using Timer = System.Timers.Timer;
 
 namespace DotnetEtcdProvider
@@ -147,40 +148,24 @@ namespace DotnetEtcdProvider
             return Task.CompletedTask;
         }
 
-        // // -------------------------------
-        // // Print function that prints key and value from the watch response
-        // private static void UpdateData(WatchResponse response)
-        // {
-        //     if (response.Events.Count == 0)
-        //     {
-        //         Console.WriteLine(response);
-        //     }
-        //     else
-        //     {
-        //         ReloadData(response.Events.);
-        //     }
-        //     Console.WriteLine("UpdateData response");
-        //     Console.WriteLine(JsonSerializer.Serialize(response));
-        // }
-
-
         /// <summary>
         /// Update data once there are changes done
         /// </summary>
         /// <param name="response"></param>
-        private void UpdateData(WatchEvent[] response)
+        private void UpdateData(WatchResponse response)
         {
             // Prevent the function make task crash due to the data cannot convert to proper data type
             try
             {
-                foreach (WatchEvent e1 in response)
+                foreach (Event evt in response.Events)
                 {
-                    string key = MapKeyToConfigurationProviderKeyPattern(e1.Key);
-                    if (e1.Value.IsEmpty())
+                    string key = MapKeyToConfigurationProviderKeyPattern(evt.Kv.Key.ToStringUtf8());
+                    string rawValue = evt.Kv.Value?.ToStringUtf8() ?? string.Empty;
+                    if (evt.Type == Event.Types.EventType.Delete || rawValue.IsEmpty())
                         Data.Remove(key);
                     else
                     {
-                        string value = e1.Value.Trim();
+                        string value = rawValue.Trim();
                         Dictionary<string, string> result = ConvertDynamicStringToDictionary(key, value);
 
                         // Delete Old keys

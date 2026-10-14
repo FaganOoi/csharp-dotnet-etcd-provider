@@ -82,7 +82,8 @@ namespace DotnetEtcdProvider
         /// <returns></returns>
         private string MapKeyToConfigurationProviderKeyPattern(string originalKey)
         {
-            if (_connectionEtcd.PrefixListUsedToRemoveInData.Any())
+            if (_connectionEtcd.PrefixListUsedToRemoveInData != null &&
+                _connectionEtcd.PrefixListUsedToRemoveInData.Any())
             {
                 foreach (var pref in _connectionEtcd.PrefixListUsedToRemoveInData)
                 {
